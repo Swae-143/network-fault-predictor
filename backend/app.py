@@ -73,8 +73,8 @@ def trigger_alert(status):
         print(f"[OK ✅] Network healthy at {current_time}")
 
 def send_email_alert(subject, body):
-    sender = "muutwikae@telecom.na"
-    password = ""
+    sender = "EMAIL_USER"
+    password = "EMAIL_PASS"
     receiver = "muutwikaeliaserndafetango@gmail.com"
 
     msg = MIMEText(body)

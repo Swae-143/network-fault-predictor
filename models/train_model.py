@@ -1,16 +1,16 @@
+from dotenv import load_dotenv
 import pandas as pd
 import psycopg2
 import os
 import joblib
 from sklearn.ensemble import RandomForestClassifier
 
+load_dotenv()
+
 # Connect to PostgreSQL
-conn = psycopg2.connect(
-    host="localhost",
-    database="network_db",
-    user="postgres",
-    password="admin123"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+conn = psycopg2.connect(DATABASE_URL)
 
 # Load data
 query = """
