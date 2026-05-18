@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Monitoring Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            background: #1e293b;
+            padding: 20px;
+            margin: 0;
+            color: #38bdf8;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 26px;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📡 Network Monitoring Dashboard</h1>
+
+    <div class="container">
+
+        <div class="card">
+            <h3>Latency</h3>
+            <div class="value" id="latency">-- ms</div>
+        </div>
+
+        <div class="card">
+            <h3>Packet Loss</h3>
+            <div class="value" id="packet_loss">-- %</div>
+        </div>
+
+        <div class="card">
+            <h3>CPU Usage</h3>
+            <div class="value" id="cpu">-- %</div>
+        </div>
+
+        <div class="card">
+            <h3>Memory Usage</h3>
+            <div class="value" id="memory">-- %</div>
+        </div>
+
+    </div>
+
+    <div id="status">Status: Waiting...</div>
+
+    <div class="footer">
+        Auto-refresh every 3 seconds
+    </div>
+
+<h3>Latency Trend</h3>
+<canvas id="latencyChart"></canvas>
+<h3>Fibre Fault Location</h3>
+<div id="map" style="height: 400px; margin: 20px;"></div>
+
+    <script>
+        let latencyData = [];
+
+const ctx = document.getElementById('latencyChart').getContext('2d');
+
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Latency (ms)',
+            data: latencyData
+        }]
+    }
+});
+
+const map = L.map('map').setView([-22.5609, 17.0658], 6);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18
+}).addTo(map);
+
+let marker = null;
+
+function updateMap(lat, lon, status) {
+    if (!lat || !lon) return;
+
+    if (status === "FIBRE_CUT") {
+        if (marker) {
+            map.removeLayer(marker);
+        }
+
+        marker = L.marker([lat, lon]).addTo(map)
+            .bindPopup("🚨 Fibre Cut Location")
+            .openPopup();
+
+        map.setView([lat, lon], 12);
+    }
+}
+
+function updateChart(value) {
+    chart.data.labels.push('');
+    chart.data.datasets[0].data.push(value);
+
+    if (chart.data.labels.length > 10) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+    }
+
+    chart.update();
+}
+
+async function updateDashboard() {
+    try {
+        // Step 1: Generate + store data
+        await fetch("/generate");
+
+        // Step 2: Fetch latest data
+        const res = await fetch("/latest");
+        const data = await res.json();
+        console.log(data);
+
+        // Update UI
+        document.getElementById("latency").innerText = data.latency + " ms";
+        document.getElementById("packet_loss").innerText = data.packet_loss + " %";
+        document.getElementById("cpu").innerText = data.cpu_usage + " %";
+        document.getElementById("memory").innerText = data.memory_usage + " %";
+
+ const statusEl = document.getElementById("status");
+
+if (data.status === "FIBRE_CUT") {
+    statusEl.innerText = "🚨 FIBRE CUT DETECTED";
+    statusEl.style.color = "#ff0000";
+
+} else if (data.status === "HARDWARE_FAILURE") {
+    statusEl.innerText = "🚨 HARDWARE FAILURE";
+    statusEl.style.color = "#ff4500";
+
+} else if (data.status === "LINK_DOWN") {
+    statusEl.innerText = "🚨 LINK DOWN";
+    statusEl.style.color = "#dc2626";
+
+} else if (data.status === "CONGESTION") {
+    statusEl.innerText = "⚠️ NETWORK CONGESTION";
+    statusEl.style.color = "#facc15";
+
+} else {
+    statusEl.innerText = "✅ NETWORK NORMAL";
+    statusEl.style.color = "#22c55e";
+}
+
+        // Update chart
+        updateChart(data.latency);
+        updateMap(data.latitude, data.longitude, data.status);
+
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+// Run on load + every 3 seconds
+window.onload = () => {
+    updateDashboard();
+    setInterval(updateDashboard, 3000);
+};
+</script>
+
+</body>
+</html>

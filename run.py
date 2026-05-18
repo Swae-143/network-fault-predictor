@@ -1,14 +1,4 @@
-import os
-import subprocess
+from backend.app import app
 
-print("🚀 Starting Network Fault Prediction System...\n")
-
-# Train only if model doesn't exist
-if not os.path.exists("models/model.pkl"):
-    print("🧠 Training model...")
-    subprocess.run("python models/train_model.py", shell=True)
-else:
-    print("✅ Model already exists. Skipping training.")
-
-print("🌐 Starting full system (Backend + Frontend)...")
-subprocess.run("python backend/app.py", shell=True)
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
